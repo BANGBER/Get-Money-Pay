@@ -13,6 +13,7 @@ import { AdsPage } from './pages/AdsPage';
 import { TasksPage } from './pages/TasksPage';
 import { WalletPage } from './pages/WalletPage';
 import { AdminPanel } from './pages/AdminPanel';
+import ProtectedRoute from "./components/ProtectedRoute";
 import { ReferralPage, LeaderboardPage } from './pages/SocialPages';
 
 export default function App() {
@@ -114,9 +115,11 @@ export default function App() {
         <Route path="/login" element={user ? <Navigate to="/" /> : <AuthPage type="login" />} />
         <Route path="/register" element={user ? <Navigate to="/" /> : <AuthPage type="register" />} />
         <Route path="/reset-password" element={<AuthPage type="reset-password" />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/regis" element={<AuthPage />} />
 
         {/* App Routes */}
-        <Route path="/" element={
+        <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard profile={profile!} stats={stats!} />
           </ProtectedRoute>
