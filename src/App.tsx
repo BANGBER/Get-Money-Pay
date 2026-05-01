@@ -6,6 +6,9 @@ import { auth, db } from './lib/firebase';
 import { UserProfile, AppStats } from './types';
 
 // Components
+import { AuthPage } from "./pages/AuthPage";
+import { Dashboard } from "./pages/Dashboard";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Layout } from './components/Layout';
 import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
@@ -114,6 +117,7 @@ export default function App() {
         <Route path="/login" element={user ? <Navigate to="/" /> : <AuthPage type="login" />} />
         <Route path="/register" element={user ? <Navigate to="/" /> : <AuthPage type="register" />} />
         <Route path="/reset-password" element={<AuthPage type="reset-password" />} />
+        <Route path="/auth" element={<AuthPage />} />
 
         {/* App Routes */}
         <Route path="/dashboard" element={
