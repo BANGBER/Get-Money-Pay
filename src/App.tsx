@@ -6,9 +6,6 @@ import { auth, db } from './lib/firebase';
 import { UserProfile, AppStats } from './types';
 
 // Components
-import { AuthPage } from "./pages/AuthPage";
-import { Dashboard } from "./pages/Dashboard";
-import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Layout } from './components/Layout';
 import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
