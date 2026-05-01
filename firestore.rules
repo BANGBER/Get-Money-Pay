@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'tedysyahrul03@gmail.com' || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isSignedIn(); // All members can see basic leaderboard stats if needed, or isolate PII
+      allow create: if isOwner(userId) && 
+        incoming().balance == 0 && 
+        incoming().totalEarned == 0 &&
+        incoming().isAdmin == (incoming().email == 'tedysyahrul03@gmail.com');
+      
+      allow update: if isOwner(userId) && (
+        // Action: Earn Reward (Ad/Task)
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'totalEarned', 'dailyAdsWatched', 'lastAdResetAt', 'paypalEmail']) &&
+          incoming().balance >= existing().balance &&
+          incoming().balance <= existing().balance + 2.0 // Sanity limit per update
+        ) ||
+        // Action: Withdraw
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'paypalEmail']) &&
+          incoming().balance < existing().balance
+        )
+      ) || isAdmin();
+    }
+
+    // Tasks
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Ads
+    match /ads/{adId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Transactions
+    match /transactions/{txId} {
+      allow read: if isOwner(existing().userId) || isAdmin();
+      allow create: if isOwner(incoming().userId) && 
+        incoming().amount <= 2.0; // Daily limit sanity check
+    }
+
+    // Withdrawals
+    match /withdrawals/{wdId} {
+      allow read: if isOwner(existing().userId) || isAdmin();
+      allow create: if isOwner(incoming().userId) && incoming().status == 'pending';
+      allow update: if isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'processedAt']);
+    }
+
+    // Stats
+    match /stats/global {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Leaderboard
+    match /leaderboard/{userId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

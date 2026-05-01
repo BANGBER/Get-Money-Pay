@@ -1,0 +1,125 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and balance information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "balance": { "type": "number", "description": "Current available balance" },
+        "totalEarned": { "type": "number", "description": "Cumulative earnings" },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string", "description": "UID of the user who referred this user" },
+        "dailyAdsWatched": { "type": "integer" },
+        "lastAdResetAt": { "type": "string", "format": "date-time" },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "paypalEmail": { "type": "string" }
+      },
+      "required": ["uid", "email", "username", "balance", "totalEarned"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Custom tasks for users to earn rewards",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "reward": { "type": "number" },
+        "link": { "type": "string" },
+        "type": { "type": "string", "enum": ["telegram_join", "telegram_bot", "youtube_sub", "facebook_follow", "other"] },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AdConfig": {
+      "title": "Ad Configuration",
+      "description": "Config for ad providers",
+      "type": "object",
+      "properties": {
+        "providerName": { "type": "string" },
+        "scriptUrl": { "type": "string" },
+        "reward": { "type": "number" },
+        "duration": { "type": "integer", "description": "Seconds per ad" },
+        "cta": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      }
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Log of all balance changes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "Payout requests",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "paypalEmail": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "processedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AppStats": {
+      "title": "App Statistics",
+      "description": "Global settings and stats",
+      "type": "object",
+      "properties": {
+        "minWithdrawal": { "type": "number" },
+        "adReward": { "type": "number" },
+        "maxDailyAds": { "type": "integer" },
+        "totalUsers": { "type": "integer" },
+        "totalPaidOut": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Primary user documents"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Available tasks"
+    },
+    "/ads/{adId}": {
+      "schema": "AdConfig",
+      "description": "Ad provider configurations"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "History of earnings and spending"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": "Withdrawal",
+      "description": "Withdrawal requests for admin review"
+    },
+    "/stats/global": {
+      "schema": "AppStats",
+      "description": "Global application configuration"
+    },
+    "/leaderboard/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string" },
+          "totalEarned": { "type": "number" }
+        }
+      },
+      "description": "Top earning users"
+    }
+  }
+}
