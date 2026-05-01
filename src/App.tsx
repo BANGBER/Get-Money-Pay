@@ -116,7 +116,7 @@ export default function App() {
         <Route path="/reset-password" element={<AuthPage type="reset-password" />} />
 
         {/* App Routes */}
-        <Route path="/" element={
+        <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard profile={profile!} stats={stats!} />
           </ProtectedRoute>
