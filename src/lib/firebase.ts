@@ -4,10 +4,9 @@ import { getFirestore } from 'firebase/firestore';
 
 import firebaseConfig from '../../firebase-applet-config.json';
 const firebaseConfig = {
-  apiKey: "AIzaSyAbb9SeaFkCP3vrI4GO0a48Gz6kZAWJzDw",
-  authDomain: "getmoneypays.firebaseapp.com",
-  projectId: "getmoneypays",
-  apiKey: import.meta.env.VITE_API_KEY
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_API_KEY,
+  projectId: import.meta.env.VITE_API_KEY,
 };
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
