@@ -7,6 +7,7 @@ const firebaseConfig = {
   apiKey: "ISI_API_KEY",
   authDomain: "ISI_DOMAIN",
   projectId: "ISI_PROJECT_ID",
+  apiKey: import.meta.env.VITE_API_KEY
 };
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
