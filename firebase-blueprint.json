@@ -119,6 +119,12 @@
           "totalEarned": { "type": "number" }
         }
       },
+  "hosting" : { 
+    "situs" : "getmoneypay", 
+
+    "publik" : "publik", 
+    ...
+  },
       "description": "Top earning users"
     }
   }
