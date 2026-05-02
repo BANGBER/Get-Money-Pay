@@ -22,6 +22,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, increment, updateDoc, addDoc } from 'firebase/firestore';
+import { register, login as loginService } from '@/src/services/auth';
 import { cn, generateReferralCode } from '@/src/lib/utils';
 import { motion } from 'motion/react';
 
@@ -54,45 +55,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ type }) => {
         if (password !== confirmPassword) throw new Error("Passwords do not match");
         if (username.length < 3) throw new Error("Username too short");
         
-        // 1. Check if username exists
-        const userQ = query(collection(db, 'users'), where('username', '==', username));
-        const usernameSnap = await getDocs(userQ);
-        if (!usernameSnap.empty) throw new Error("Username already taken");
-
-        // 2. Create user
-        const { user } = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(user, { displayName });
-
-        // 3. Handle referral
-        let referredBy = '';
-        if (referralCode) {
-          const refQ = query(collection(db, 'users'), where('referralCode', '==', referralCode));
-          const refSnap = await getDocs(refQ);
-          if (!refSnap.empty) {
-            referredBy = refSnap.docs[0].id;
-            // Optionally reward the inviter immediately or later
-          }
-        }
-
-        // 4. Create profile
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          username,
-          displayName,
-          balance: 0,
-          totalEarned: 0,
-          referralCode: generateReferralCode(),
-          referredBy,
-          dailyAdsWatched: 0,
-          lastAdResetAt: new Date().toISOString(),
-          isAdmin: email === 'tedysyahrul03@gmail.com', // Bootstrap admin
-          createdAt: serverTimestamp(),
-        });
-
-        navigate('/');
+        await register(email, password, displayName, username);
+        navigate('/dashboard');
       } else if (type === 'login') {
-        // Support email or username login
         let loginEmail = email;
         if (!email.includes('@')) {
            const unameQ = query(collection(db, 'users'), where('username', '==', email));
@@ -100,8 +65,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ type }) => {
            if (unameSnap.empty) throw new Error("Username not found");
            loginEmail = unameSnap.docs[0].data().email;
         }
-        await signInWithEmailAndPassword(auth, loginEmail, password);
-        navigate('/');
+        await loginService(loginEmail, password);
+        navigate('/dashboard');
       } else if (type === 'reset-password') {
         await sendPasswordResetEmail(auth, email);
         setSuccess("Reset link sent to your email!");

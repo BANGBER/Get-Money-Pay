@@ -7,6 +7,7 @@ import { UserProfile, AppStats } from './types';
 
 // Components
 import { Layout } from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
 import { AdsPage } from './pages/AdsPage';
@@ -43,7 +44,6 @@ export default function App() {
             
             setProfile({ ...data, uid: docSnap.id });
           } else {
-            // Profile doesn't exist? (Shouldn't happen with our registration but safety first)
             setProfile(null);
           }
         });
@@ -97,70 +97,64 @@ export default function App() {
     );
   }
 
-  const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
-    if (!user) return <Navigate to="/login" />;
-    if (adminOnly && !profile?.isAdmin) return <Navigate to="/" />;
-    return (
-      <Layout user={user} profile={profile}>
-        {children}
-      </Layout>
-    );
-  };
-
   return (
     <BrowserRouter>
       <Routes>
         {/* Auth Routes */}
-        <Route path="/login" element={user ? <Navigate to="/" /> : <AuthPage type="login" />} />
-        <Route path="/register" element={user ? <Navigate to="/" /> : <AuthPage type="register" />} />
+        <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="login" />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="login" />} />
+        <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="register" />} />
+        <Route path="/regis" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="register" />} />
         <Route path="/reset-password" element={<AuthPage type="reset-password" />} />
 
-        {/* App Routes */}
+        {/* Dashboard and Home */}
+        <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/dashboard" element={
-          <ProtectedRoute>
+          <ProtectedRoute profile={profile}>
             <Dashboard profile={profile!} stats={stats!} />
           </ProtectedRoute>
         } />
         
+        {/* Ad Routes */}
         <Route path="/ads" element={
-          <ProtectedRoute>
+          <ProtectedRoute profile={profile}>
             <AdsPage profile={profile!} stats={stats!} onRewardReceived={() => {}} />
           </ProtectedRoute>
         } />
 
         <Route path="/tasks" element={
-          <ProtectedRoute>
+          <ProtectedRoute profile={profile}>
             <TasksPage profile={profile!} />
           </ProtectedRoute>
         } />
 
         <Route path="/wallet" element={
-          <ProtectedRoute>
+          <ProtectedRoute profile={profile}>
             <WalletPage profile={profile!} minWithdrawal={stats?.minWithdrawal || 1.0} onRefresh={() => {}} />
           </ProtectedRoute>
         } />
 
         <Route path="/referrals" element={
-          <ProtectedRoute>
+          <ProtectedRoute profile={profile}>
             <ReferralPage profile={profile!} />
           </ProtectedRoute>
         } />
 
         <Route path="/leaderboard" element={
-          <ProtectedRoute>
+          <ProtectedRoute profile={profile}>
             <LeaderboardPage />
           </ProtectedRoute>
         } />
 
         {/* Admin Routes */}
         <Route path="/admin" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute adminOnly profile={profile}>
             <AdminPanel currentStats={stats!} onStatsUpdate={() => {}} />
           </ProtectedRoute>
         } />
 
         {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>
     </BrowserRouter>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { PlayCircle, ShieldIcon, CheckCircle2, AlertCircle, X, ExternalLink } from 'lucide-react';
 import { auth, db } from '@/src/lib/firebase';
 import { doc, updateDoc, increment, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addBalance } from '@/src/services/wallet';
 import { UserProfile, AdConfig, AppStats } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -83,22 +84,12 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
 
     try {
       const reward = stats?.adReward || 0.04;
-      const userRef = doc(db, 'users', profile.uid);
-      
-      // Update user state
-      await updateDoc(userRef, {
-        balance: increment(reward),
-        totalEarned: increment(reward),
-        dailyAdsWatched: increment(1)
-      });
+      await addBalance(profile.uid, reward, "Watched full ad session (60s)");
 
-      // Log transaction
-      await addDoc(collection(db, 'transactions'), {
-        userId: profile.uid,
-        amount: reward,
-        type: 'ad_reward',
-        description: 'Watched full ad session (60s)',
-        createdAt: serverTimestamp()
+      // Update daily ad count locally/in Firestore
+      const userRef = doc(db, 'users', profile.uid);
+      await updateDoc(userRef, {
+        dailyAdsWatched: increment(1)
       });
 
       setIsCompleted(true);
