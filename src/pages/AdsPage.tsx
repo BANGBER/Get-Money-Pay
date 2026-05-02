@@ -1,7 +1,6 @@
 import React from 'react';
 import { PlayCircle, ShieldIcon, CheckCircle2, AlertCircle, X, ExternalLink } from 'lucide-react';
-import { auth, db } from '@/src/lib/firebase';
-import { doc, updateDoc, increment, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { auth, db, doc, updateDoc, increment, addDoc, collection, serverTimestamp } from '@/src/lib/firebase';
 import { addBalance } from '@/src/services/wallet';
 import { UserProfile, AdConfig, AppStats } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
@@ -25,9 +24,9 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const ads: AdConfig[] = [
-    { id: '1', providerName: 'AdProvider A', scriptUrl: '#', reward: stats?.adReward || 0.04, duration: 20, cta: 'Check it out', isActive: true },
-    { id: '2', providerName: 'AdProvider B', scriptUrl: '#', reward: stats?.adReward || 0.04, duration: 20, cta: 'Learn More', isActive: true },
-    { id: '3', providerName: 'AdProvider C', scriptUrl: '#', reward: stats?.adReward || 0.04, duration: 20, cta: 'Join Now', isActive: true },
+    { id: '1', providerName: 'Partner A', scriptUrl: '#', reward: stats?.adReward || 0.04, duration: 20, cta: 'Check it out', isActive: true },
+    { id: '2', providerName: 'Partner B', scriptUrl: '#', reward: stats?.adReward || 0.04, duration: 20, cta: 'Learn More', isActive: true },
+    { id: '3', providerName: 'Partner C', scriptUrl: '#', reward: stats?.adReward || 0.04, duration: 20, cta: 'Join Now', isActive: true },
   ];
 
   const startAds = () => {
@@ -42,26 +41,24 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
   };
 
   React.useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
     if (isPlaying && timeLeft > 0 && !isPaused) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          const next = prev - 1;
-          if (next === 40) setCurrentAdIndex(1);
-          if (next === 20) setCurrentAdIndex(2);
-          if (next <= 0) {
-            handleComplete();
-            return 0;
-          }
-          return next;
-        });
+      interval = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
       }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (interval) clearInterval(interval);
     };
-  }, [isPlaying, isPaused, timeLeft]);
+  }, [isPlaying, isPaused]);
+
+  React.useEffect(() => {
+    if (isPlaying && timeLeft <= 0) {
+      handleComplete();
+    }
+    if (timeLeft === 40) setCurrentAdIndex(1);
+    if (timeLeft === 20) setCurrentAdIndex(2);
+  }, [timeLeft, isPlaying]);
 
   // Handle visibility API (Anti-cheat)
   React.useEffect(() => {
@@ -84,7 +81,7 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
 
     try {
       const reward = stats?.adReward || 0.04;
-      await addBalance(profile.uid, reward, "Watched full ad session (60s)");
+      await addBalance(profile.uid, reward, "Watched ad reward");
 
       // Update daily ad count locally/in Firestore
       const userRef = doc(db, 'users', profile.uid);
@@ -173,14 +170,14 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
               <div className="flex items-center gap-3">
                 <ShieldIcon className="text-blue-400" size={24} />
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Secure Network</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Advertising Partner</p>
                   <p className="text-lg font-black tracking-tight">{ads[currentAdIndex].providerName}</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Session Progress</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Time Remaining</p>
                   <p className={cn(
                     "text-3xl font-black tabular-nums tracking-tighter",
                     timeLeft < 10 ? "text-red-500 animate-pulse" : "text-white"
@@ -249,11 +246,11 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
             {/* Footer info */}
             <div className="mt-8 flex justify-between items-center text-[10px] uppercase font-black text-slate-600 tracking-[0.3em]">
                <div className="flex items-center gap-4">
-                 <span className="text-indigo-400">Session 00{currentAdIndex + 1}</span>
+                 <span className="text-indigo-400">Ad 00{currentAdIndex + 1}</span>
                  <span className="opacity-20">|</span>
-                 <span>Rotation Protocol 4.1</span>
+                 <span>Ad Session</span>
                </div>
-               <div>Do not terminate this session</div>
+               <div>Please do not close this window</div>
             </div>
           </motion.div>
         )}
@@ -266,13 +263,13 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
               <ShieldIcon className="text-indigo-400" size={28} />
             </div>
             <div>
-              <p className="font-black text-white text-lg">Anti-Cheat Protocol</p>
+              <p className="font-black text-white text-lg">Verification System</p>
               <p className="text-sm text-slate-400 font-medium leading-tight">Switching windows will result in instant session pause.</p>
             </div>
          </div>
          <div className="text-center md:text-right px-8 py-4 bg-white/5 rounded-[2rem] border border-white/5">
-            <p className="text-indigo-400 font-black text-[10px] uppercase tracking-widest mb-1">Active Payout</p>
-            <p className="text-2xl font-black text-white">{formatCurrency(stats?.adReward || 0.04)} / Unit</p>
+            <p className="text-indigo-400 font-black text-[10px] uppercase tracking-widest mb-1">Reward Amount</p>
+            <p className="text-2xl font-black text-white">{formatCurrency(stats?.adReward || 0.04)} / Ad</p>
          </div>
       </div>
     </div>

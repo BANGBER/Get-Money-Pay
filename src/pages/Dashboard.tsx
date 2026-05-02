@@ -18,7 +18,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile, stats }) => {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-white tracking-tight">
-            Hi, {profile.displayName.split(' ')[0]} 👋
+            Hi, {profile?.displayName?.split(' ')[0] || 'User'} 👋
           </h2>
           <p className="text-slate-400 font-medium">Ready to earn some dollars today?</p>
         </div>

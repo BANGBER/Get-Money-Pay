@@ -1,8 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from './lib/firebase';
+import { auth, db, onAuthStateChanged, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from './lib/firebase';
 import { UserProfile, AppStats } from './types';
 
 // Components
@@ -17,10 +15,20 @@ import { AdminPanel } from './pages/AdminPanel';
 import { ReferralPage, LeaderboardPage } from './pages/SocialPages';
 
 export default function App() {
-  const [user, setUser] = React.useState<User | null>(null);
+  const [user, setUser] = React.useState<any>(null);
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [stats, setStats] = React.useState<AppStats | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  // Telegram Auto Login
+  React.useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.initData && !auth.currentUser) {
+       auth.loginWithTelegram(tg.initData)
+         .then(() => tg.expand())
+         .catch(err => console.error("Telegram login failed", err));
+    }
+  }, []);
 
   // Auth observer
   React.useEffect(() => {
@@ -31,17 +39,6 @@ export default function App() {
         const profileUnsub = onSnapshot(doc(db, 'users', u.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
-            
-            // Daily reset check (24h)
-            const lastReset = new Date(data.lastAdResetAt || 0).getTime();
-            const now = new Date().getTime();
-            if (now - lastReset > 24 * 60 * 60 * 1000) {
-               setDoc(doc(db, 'users', u.uid), {
-                 dailyAdsWatched: 0,
-                 lastAdResetAt: new Date().toISOString()
-               }, { merge: true });
-            }
-            
             setProfile({ ...data, uid: docSnap.id });
           } else {
             setProfile(null);

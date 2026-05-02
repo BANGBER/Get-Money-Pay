@@ -1,8 +1,7 @@
 import React from 'react';
 import { Users, Share2, Clipboard, CheckCircle2, Gift, ChevronRight, Gift as GiftIcon, Link as LinkIcon } from 'lucide-react';
 import { UserProfile } from '@/src/types';
-import { db } from '@/src/lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { db, collection, query, where, getDocs, orderBy, limit } from '@/src/lib/firebase';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion } from 'motion/react';
 
@@ -49,7 +48,7 @@ export const ReferralPage: React.FC<ReferralPageProps> = ({ profile }) => {
          <div className="relative z-10 max-w-lg space-y-6">
             <h2 className="text-5xl font-black tracking-tighter leading-[1.1]">Refer Friends,<br/>Earn Together!</h2>
             <p className="text-white/60 text-lg font-medium leading-relaxed">
-              Propagate your link across the network. For every successful node registration, you both receive premium rewards.
+              Share your invite link. Both of you get rewarded when they join using your code.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -62,7 +61,7 @@ export const ReferralPage: React.FC<ReferralPageProps> = ({ profile }) => {
                 onClick={copyToClipboard}
               >
                  {copied ? <CheckCircle2 size={24} className="text-green-500" /> : <Share2 size={24} />}
-                 {copied ? 'Protocol Copied' : 'Launch Invite'}
+                 {copied ? 'Code Copied' : 'Copy Invite Link'}
               </div>
             </div>
          </div>
@@ -75,7 +74,7 @@ export const ReferralPage: React.FC<ReferralPageProps> = ({ profile }) => {
             <div className="p-2 bg-indigo-500/20 rounded-lg border border-indigo-500/20">
               <LinkIcon size={20} className="text-indigo-400" />
             </div>
-            Access Terminal
+            Invitation Link
           </h3>
           <div className="relative group">
             <input 
@@ -91,7 +90,7 @@ export const ReferralPage: React.FC<ReferralPageProps> = ({ profile }) => {
             </button>
           </div>
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest px-2">
-            Disseminate this link via standard communication channels.
+            Copy this link and send it to your friends.
           </p>
         </div>
 
@@ -101,7 +100,7 @@ export const ReferralPage: React.FC<ReferralPageProps> = ({ profile }) => {
                <Users size={36} />
             </div>
             <div>
-              <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] mb-1">Nodes Recruited</p>
+              <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] mb-1">Total Referrals</p>
               <h3 className="text-6xl font-black text-white tracking-tighter">{referrals.length}</h3>
             </div>
             <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Share to unlock higher tiers</p>
@@ -111,8 +110,8 @@ export const ReferralPage: React.FC<ReferralPageProps> = ({ profile }) => {
       {/* Referral History */}
       <div className="bg-[#1E293B]/40 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl">
          <div className="flex items-center justify-between mb-8">
-           <h3 className="text-xl font-black text-white tracking-tight">Recent Nodes</h3>
-           <div className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Log</div>
+           <h3 className="text-xl font-black text-white tracking-tight">Recent Referrals</h3>
+           <div className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">LOG</div>
          </div>
          {loading ? (
             <div className="py-20 text-center text-slate-500 font-black animate-pulse uppercase tracking-[0.2em] text-xs">Synchronizing team data...</div>
@@ -138,7 +137,7 @@ export const ReferralPage: React.FC<ReferralPageProps> = ({ profile }) => {
                       </div>
                    </div>
                    <div className="text-[10px] font-black text-green-400 bg-green-500/10 px-4 py-1.5 rounded-full border border-green-500/20 uppercase tracking-widest">
-                      Operational
+                      Active
                    </div>
                 </div>
               ))}
@@ -173,13 +172,13 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = () => {
   return (
     <div className="space-y-8">
       <div className="text-center space-y-2">
-         <h2 className="text-4xl font-black text-white tracking-tighter">Prime Nodes</h2>
-         <p className="text-slate-500 font-black uppercase text-[10px] tracking-[0.4em]">The Elite Sector of the Network</p>
+         <h2 className="text-4xl font-black text-white tracking-tighter">Top Earners</h2>
+         <p className="text-slate-500 font-black uppercase text-[10px] tracking-[0.4em]">The top users on GetMoneyPay</p>
       </div>
 
       <div className="max-w-2xl mx-auto space-y-4">
         {loading ? (
-           <div className="py-20 text-center font-black text-slate-600 animate-pulse text-sm uppercase tracking-widest">Ranking Global Nodes...</div>
+           <div className="py-20 text-center font-black text-slate-600 animate-pulse text-sm uppercase tracking-widest">Loading leaderboard...</div>
         ) : (
           leaders.map((user, idx) => (
             <motion.div 
@@ -211,7 +210,7 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = () => {
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <p className="font-black text-white truncate tracking-tight text-lg">@{user.username}</p>
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">Signal since {new Date(user.createdAt).getFullYear()}</p>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">Member since {new Date(user.createdAt).getFullYear()}</p>
                 </div>
               </div>
 
@@ -220,7 +219,7 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = () => {
                   "text-2xl font-black tracking-tighter leading-none",
                   idx === 0 ? "text-yellow-400" : "text-white"
                 )}>{formatCurrency(user.totalEarned)}</p>
-                <p className="text-[10px] font-black text-slate-600 uppercase mt-1 tracking-widest">Yield Output</p>
+                <p className="text-[10px] font-black text-slate-600 uppercase mt-1 tracking-widest">Total Earned</p>
               </div>
             </motion.div>
           ))

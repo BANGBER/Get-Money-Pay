@@ -1,5 +1,4 @@
-import { db } from "../lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db, doc, getDoc, setDoc } from "../lib/firebase";
 
 export interface AdSystemConfig {
   scriptCode: string;

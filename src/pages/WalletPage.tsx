@@ -1,7 +1,6 @@
 import React from 'react';
 import { Wallet, DollarSign, History, Send, AlertCircle, CheckCircle2, Clock, XCircle, CreditCard, ChevronRight } from 'lucide-react';
-import { db } from '@/src/lib/firebase';
-import { collection, query, getDocs, where, doc, updateDoc, increment, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { db, collection, query, getDocs, where, doc, updateDoc, increment, addDoc, serverTimestamp, orderBy } from '@/src/lib/firebase';
 import { UserProfile, Transaction, Withdrawal } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion } from 'motion/react';
@@ -113,8 +112,8 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
              <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-3xl transition-all group-hover:scale-150 duration-700" />
              <div className="flex justify-between items-center mb-10 relative z-10">
                 <div>
-                  <p className="text-white/60 font-black uppercase tracking-[0.2em] text-[10px] mb-1">Vault Balance</p>
-                  <p className="text-sm font-medium text-white/80 tracking-tight">Ready for deployment</p>
+                  <p className="text-white/60 font-black uppercase tracking-[0.2em] text-[10px] mb-1">Your Balance</p>
+                  <p className="text-sm font-medium text-white/80 tracking-tight">Available to withdraw</p>
                 </div>
                 <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-xl">
                   <CreditCard size={24} />
@@ -136,13 +135,13 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
               </h3>
               <div className="px-4 py-1.5 bg-white/5 border border-white/5 rounded-full text-[10px] font-black text-slate-400 tracking-widest">
-                PAYPAL NETWORK
+                PAYPAL
               </div>
             </div>
             
             <form onSubmit={handleWithdraw} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">PayPal Gateway</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">PayPal Email</label>
                 <div className="relative">
                   <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                   <input 
@@ -155,7 +154,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Volume ($)</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Amount ($)</label>
                 <div className="relative">
                   <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                   <input 
@@ -163,7 +162,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
                     step="0.01"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder={`Entry amount (Min ${formatCurrency(minWithdrawal)})`}
+                    placeholder={`Withdrawal amount (Min ${formatCurrency(minWithdrawal)})`}
                     className="w-full pl-12 pr-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-white placeholder-slate-600 focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
                   />
                 </div>
@@ -195,7 +194,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
                 ) : (
                   <>
                     <Send size={20} />
-                    Execute Withdrawal
+                    Request Payment
                   </>
                 )}
               </button>
@@ -207,8 +206,8 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
         <div className="bg-[#1E293B]/40 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <h3 className="text-2xl font-black text-white tracking-tight">Ledger history</h3>
-              <p className="text-xs text-slate-500 font-medium">Internal transaction log</p>
+              <h3 className="text-2xl font-black text-white tracking-tight">Earnings History</h3>
+              <p className="text-xs text-slate-500 font-medium">Your recent activities</p>
             </div>
             <div className="p-3 bg-white/5 border border-white/5 rounded-2xl text-indigo-400">
               <History size={20} />
@@ -219,7 +218,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
             {transactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-600 space-y-4 opacity-50">
                 <History size={48} strokeWidth={1} />
-                <p className="font-black uppercase tracking-widest text-[10px]">No ledger entries found</p>
+                <p className="font-black uppercase tracking-widest text-[10px]">No recent activities</p>
               </div>
             ) : (
               transactions.map((tx) => (
@@ -237,7 +236,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
                       <p className="font-black text-white text-sm leading-tight group-hover:translate-x-1 transition-transform">{tx.description}</p>
                       <p className="text-[10px] font-black text-slate-500 uppercase mt-1 flex items-center gap-2">
                         <Clock size={10} />
-                        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'Syncing...'}
+                        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'Pending...'}
                       </p>
                     </div>
                   </div>
@@ -254,7 +253,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
 
           {withdrawals.length > 0 && (
             <div className="mt-10 pt-8 border-t border-white/5">
-               <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-6">Settlement status</h4>
+               <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-6">Recent Requests</h4>
                <div className="space-y-3">
                  {withdrawals.slice(0, 3).map(wd => (
                    <div key={wd.id} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/[0.08] transition-colors">

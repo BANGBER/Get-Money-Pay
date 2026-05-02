@@ -13,15 +13,7 @@ import {
   Key,
   Users
 } from 'lucide-react';
-import { auth, db, googleProvider } from '@/src/lib/firebase';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  sendPasswordResetEmail,
-  updateProfile,
-  signInWithPopup
-} from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, increment, updateDoc, addDoc } from 'firebase/firestore';
+import { auth, db, doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, increment, updateDoc, addDoc, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from '@/src/lib/firebase';
 import { register, login as loginService } from '@/src/services/auth';
 import { cn, generateReferralCode } from '@/src/lib/utils';
 import { motion } from 'motion/react';
@@ -55,17 +47,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ type }) => {
         if (password !== confirmPassword) throw new Error("Passwords do not match");
         if (username.length < 3) throw new Error("Username too short");
         
-        await register(email, password, displayName, username);
+        await register(email, password, displayName, username, referralCode);
         navigate('/dashboard');
       } else if (type === 'login') {
-        let loginEmail = email;
-        if (!email.includes('@')) {
-           const unameQ = query(collection(db, 'users'), where('username', '==', email));
-           const unameSnap = await getDocs(unameQ);
-           if (unameSnap.empty) throw new Error("Username not found");
-           loginEmail = unameSnap.docs[0].data().email;
-        }
-        await loginService(loginEmail, password);
+        await loginService(email, password);
         navigate('/dashboard');
       } else if (type === 'reset-password') {
         await sendPasswordResetEmail(auth, email);

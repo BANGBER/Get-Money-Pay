@@ -1,7 +1,6 @@
 import React from 'react';
 import { ClipboardList, ExternalLink, ShieldCheck, CheckCircle2, ChevronRight, MessageSquare, Youtube, Facebook, Send, AlertCircle } from 'lucide-react';
-import { db } from '@/src/lib/firebase';
-import { collection, query, getDocs, where, doc, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, collection, query, getDocs, where, doc, updateDoc, increment, addDoc, serverTimestamp } from '@/src/lib/firebase';
 import { UserProfile, Task } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion } from 'motion/react';
@@ -87,7 +86,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ profile }) => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
-        <p className="text-slate-500 font-bold">Scanning for tasks...</p>
+        <p className="text-slate-500 font-bold">Finding tasks for you...</p>
       </div>
     );
   }
@@ -183,7 +182,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ profile }) => {
                   {isCompleted && (
                     <div className="px-6 py-3 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 font-black flex items-center justify-center gap-2 w-full text-sm">
                       <CheckCircle2 size={18} />
-                      Settled
+                      Claimed
                     </div>
                   )}
                 </div>
@@ -200,13 +199,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ profile }) => {
               <ShieldCheck className="text-green-400" size={28} />
             </div>
             <div>
-              <p className="font-black text-lg">Safe Task Validation</p>
-              <p className="text-sm text-slate-400 font-medium leading-tight">Rewards are processed instantly after manual verification check.</p>
+              <p className="font-black text-lg">Secure Earnings</p>
+              <p className="text-sm text-slate-400 font-medium leading-tight">Rewards are processed instantly after verification check.</p>
             </div>
          </div>
          <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5">
             <AlertCircle size={20} className="text-yellow-400" />
-            <p className="text-[10px] font-black text-slate-400 max-w-[200px] uppercase leading-relaxed tracking-wider">Faking tasks will result in account suspension and loss of balance.</p>
+            <p className="text-[10px] font-black text-slate-400 max-w-[200px] uppercase leading-relaxed tracking-wider">Cheating will lead to account ban and balance loss.</p>
          </div>
       </div>
     </div>

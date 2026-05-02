@@ -1,7 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Users, DollarSign, Settings, Plus, Trash2, CheckCircle2, XCircle, Send, ClipboardList, BarChart3 } from 'lucide-react';
-import { db } from '@/src/lib/firebase';
-import { collection, query, getDocs, doc, updateDoc, increment, addDoc, serverTimestamp, orderBy, deleteDoc, setDoc } from 'firebase/firestore';
+import { db, collection, query, getDocs, doc, updateDoc, increment, addDoc, serverTimestamp, orderBy, deleteDoc, setDoc, api } from '@/src/lib/firebase';
 import { UserProfile, Task, Withdrawal, AppStats } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion } from 'motion/react';
@@ -26,19 +25,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
     const fetchData = async () => {
       setLoading(true);
       try {
-        const wdQ = query(collection(db, 'withdrawals'), orderBy('createdAt', 'desc'));
-        const tasksQ = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
-        const usersQ = query(collection(db, 'users'), orderBy('balance', 'desc'));
-
-        const [wdSnap, tasksSnap, usersSnap] = await Promise.all([
-          getDocs(wdQ), 
-          getDocs(tasksQ),
-          getDocs(usersQ)
+        const [usersData, wdsData, tasksData] = await Promise.all([
+          api.fetch("/admin/users"),
+          api.fetch("/admin/withdrawals"),
+          api.fetch("/tasks")
         ]);
 
-        setWithdrawals(wdSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Withdrawal)));
-        setTasks(tasksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)));
-        setUsers(usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any as UserProfile)));
+        setUsers(usersData.map((u: any) => ({ ...u, uid: u.id, totalEarned: u.total_earned })));
+        setWithdrawals(wdsData.map((w: any) => ({ ...w, username: w.user_username })));
+        setTasks(tasksData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -51,39 +46,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
 
   const handleWithdrawalAction = async (wd: Withdrawal, action: 'completed' | 'rejected') => {
     try {
-      await updateDoc(doc(db, 'withdrawals', wd.id), {
-        status: action,
-        processedAt: serverTimestamp()
+      await api.fetch(`/admin/withdrawals/${wd.id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status: action })
       });
-
-      if (action === 'rejected') {
-        // Refund user balance
-        await updateDoc(doc(db, 'users', wd.userId), {
-          balance: increment(wd.amount)
-        });
-        
-        await addDoc(collection(db, 'transactions'), {
-          userId: wd.userId,
-          amount: wd.amount,
-          type: 'ad_reward', // Should be refund but let's stick to simple types or add 'refund'
-          description: `Refund: Withdrawal of ${formatCurrency(wd.amount)} rejected`,
-          createdAt: serverTimestamp()
-        });
-      }
-
       setWithdrawals(prev => prev.map(item => item.id === wd.id ? { ...item, status: action } : item));
     } catch (err) {
       console.error(err);
+      alert("Failed to update withdrawal status");
     }
   };
 
   const updateGlobalStats = async () => {
     try {
-      await setDoc(doc(db, 'stats', 'global'), {
-        ...currentStats,
-        adReward: parseFloat(newAdReward),
-        minWithdrawal: parseFloat(newMinWithdraw)
-      }, { merge: true });
+      await api.fetch("/admin/stats", {
+        method: "POST",
+        body: JSON.stringify({
+          ad_reward: parseFloat(newAdReward),
+          min_withdrawal: parseFloat(newMinWithdraw)
+        })
+      });
       onStatsUpdate();
       alert('Settings updated!');
     } catch (err) {
@@ -101,15 +83,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
     try {
       const newTask = {
         title,
-        description: `Complete the ${title} action to earn ${formatCurrency(reward)}`,
         reward,
         link: link || '',
         type: type || 'other',
-        isActive: true,
-        createdAt: new Date().toISOString()
+        category: 'Social',
+        icon: 'Star'
       };
-      const docRef = await addDoc(collection(db, 'tasks'), newTask);
-      setTasks(prev => [{ id: docRef.id, ...newTask }, ...prev]);
+      const res = await api.fetch("/admin/tasks", {
+        method: "POST",
+        body: JSON.stringify(newTask)
+      });
+      setTasks(prev => [{ id: res.id, ...newTask, isActive: true } as any, ...prev]);
     } catch (err) {
       console.error(err);
     }
@@ -118,7 +102,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
   const deleteTask = async (id: string) => {
     if (!confirm("Are you sure?")) return;
     try {
-      await deleteDoc(doc(db, 'tasks', id));
+      await api.fetch(`/admin/tasks/${id}`, { method: "DELETE" });
       setTasks(prev => prev.filter(t => t.id !== id));
     } catch (err) {
       console.error(err);
@@ -131,7 +115,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
         <div>
           <h2 className="text-3xl font-black text-white flex items-center gap-3 tracking-tight">
             <ShieldCheck size={36} className="text-indigo-400" />
-            Admin Protocol
+            Admin Dashboard
           </h2>
           <p className="text-slate-400 font-medium">Manage payouts, tasks, and system configurations.</p>
         </div>
@@ -143,7 +127,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
           { id: 'requests', label: 'Payouts', icon: DollarSign },
           { id: 'tasks', label: 'Tasks', icon: ClipboardList },
           { id: 'users', label: 'Users', icon: Users },
-          { id: 'settings', label: 'Global Rules', icon: Settings },
+          { id: 'settings', label: 'Settings', icon: Settings },
         ].map(tab => (
           <button
             key={tab.id}
@@ -249,14 +233,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
 
         {activeTab === 'users' && (
           <div className="p-8">
-            <h3 className="text-xl font-black mb-6 text-white">Registry ({users.length})</h3>
+            <h3 className="text-xl font-black mb-6 text-white">User List ({users.length})</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-white/5">
-                    <th className="pb-4 font-black text-slate-600 text-[10px] uppercase tracking-widest">Identity</th>
+                    <th className="pb-4 font-black text-slate-600 text-[10px] uppercase tracking-widest">User</th>
                     <th className="pb-4 font-black text-slate-600 text-[10px] uppercase tracking-widest">Balance</th>
-                    <th className="pb-4 font-black text-slate-600 text-[10px] uppercase tracking-widest">Total Yield</th>
+                    <th className="pb-4 font-black text-slate-600 text-[10px] uppercase tracking-widest">Total Earned</th>
                     <th className="pb-4 font-black text-slate-600 text-[10px] uppercase tracking-widest">Referrer</th>
                   </tr>
                 </thead>
@@ -284,11 +268,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
 
         {activeTab === 'settings' && (
           <div className="p-8 space-y-8">
-            <h3 className="text-xl font-black text-white">Global Protocol Configuration</h3>
+            <h3 className="text-xl font-black text-white">App Configuration</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ad Payout (per unit)</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ad Reward ($)</label>
                 <div className="relative">
                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
                      <DollarSign size={18} />
@@ -304,7 +288,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Settlement Minimum</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Min Withdrawal ($)</label>
                 <div className="relative">
                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
                      <DollarSign size={18} />
@@ -324,7 +308,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
               onClick={updateGlobalStats}
               className="bg-white text-slate-950 px-8 py-4 rounded-2xl font-black text-lg hover:bg-slate-200 transition-all shadow-2xl"
             >
-              Update Protocols
+              Save Changes
             </button>
           </div>
         )}
@@ -333,21 +317,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
       {/* Global overview stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
          <div className="bg-[#1E293B]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-xl">
-            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Network Nodes</h4>
+            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Total Users</h4>
             <p className="text-2xl font-black text-white">{users.length}</p>
          </div>
          <div className="bg-[#1E293B]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-xl">
-            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Total Liability</h4>
+            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Total Pending</h4>
             <p className="text-2xl font-black text-indigo-400">
               {formatCurrency(withdrawals.filter(w => w.status === 'pending').reduce((acc, curr) => acc + curr.amount, 0))}
             </p>
          </div>
          <div className="bg-[#1E293B]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-xl">
-            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Mission Pool</h4>
+            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Total Tasks</h4>
             <p className="text-2xl font-black text-white">{tasks.length}</p>
          </div>
          <div className="bg-[#1E293B]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-xl">
-            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Grid Status</h4>
+            <h4 className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">System Status</h4>
             <span className="flex items-center gap-2 text-green-400 text-[10px] font-black mt-1 uppercase tracking-widest">
               <CheckCircle2 size={14} /> ACTIVE
             </span>
