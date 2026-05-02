@@ -122,8 +122,7 @@
   "hosting" : { 
     "situs" : "getmoneypay", 
 
-    "publik" : "publik", 
-    ...
+    "publik" : "publik",
   },
       "description": "Top earning users"
     }
