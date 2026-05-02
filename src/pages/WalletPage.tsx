@@ -1,6 +1,6 @@
 import React from 'react';
 import { Wallet, DollarSign, History, Send, AlertCircle, CheckCircle2, Clock, XCircle, CreditCard, ChevronRight } from 'lucide-react';
-import { db, collection, query, getDocs, where, doc, updateDoc, increment, addDoc, serverTimestamp, orderBy } from '@/src/lib/firebase';
+import { api } from '@/src/lib/firebase';
 import { UserProfile, Transaction, Withdrawal } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion } from 'motion/react';
@@ -15,38 +15,29 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [withdrawals, setWithdrawals] = React.useState<Withdrawal[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [paypalEmail, setPaypalEmail] = React.useState(profile.paypalEmail || '');
+  const [paypalEmail, setPaypalEmail] = React.useState('');
   const [withdrawAmount, setWithdrawAmount] = React.useState('');
   const [status, setStatus] = React.useState<{ type: 'success' | 'error', msg: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const txQ = query(
-          collection(db, 'transactions'), 
-          where('userId', '==', profile.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const wdQ = query(
-          collection(db, 'withdrawals'), 
-          where('userId', '==', profile.uid),
-          orderBy('createdAt', 'desc')
-        );
-
-        const [txSnap, wdSnap] = await Promise.all([getDocs(txQ), getDocs(wdQ)]);
-        
-        setTransactions(txSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
-        setWithdrawals(wdSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Withdrawal)));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [profile.uid]);
+
+  const fetchData = async () => {
+    try {
+      const [txs, wds] = await Promise.all([
+        api.fetch('/user/transactions'),
+        api.fetch('/user/withdrawals')
+      ]);
+      setTransactions(txs);
+      setWithdrawals(wds);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,37 +50,18 @@ export const WalletPage: React.FC<WalletPageProps> = ({ profile, minWithdrawal, 
 
     setIsSubmitting(true);
     try {
-      // 1. Create withdrawal request
-      await addDoc(collection(db, 'withdrawals'), {
-        userId: profile.uid,
-        username: profile.username,
-        paypalEmail,
-        amount,
-        status: 'pending',
-        createdAt: serverTimestamp()
-      });
-
-      // 2. Deduct from balance
-      await updateDoc(doc(db, 'users', profile.uid), {
-        balance: increment(-amount),
-        paypalEmail // Update saved email
-      });
-
-      // 3. Log transaction
-      await addDoc(collection(db, 'transactions'), {
-        userId: profile.uid,
-        amount: -amount,
-        type: 'withdrawal',
-        description: `Withdrawal request to ${paypalEmail}`,
-        createdAt: serverTimestamp()
+      await api.fetch('/withdraw/request', {
+        method: 'POST',
+        body: JSON.stringify({ amount, paypalEmail })
       });
 
       setStatus({ type: 'success', msg: 'Withdrawal request submitted successfully!' });
       setWithdrawAmount('');
       onRefresh();
-    } catch (err) {
+      fetchData();
+    } catch (err: any) {
       console.error(err);
-      setStatus({ type: 'error', msg: 'Something went wrong. Please try again.' });
+      setStatus({ type: 'error', msg: err.message || 'Something went wrong. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }

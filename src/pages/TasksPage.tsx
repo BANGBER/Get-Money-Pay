@@ -1,6 +1,6 @@
 import React from 'react';
 import { ClipboardList, ExternalLink, ShieldCheck, CheckCircle2, ChevronRight, MessageSquare, Youtube, Facebook, Send, AlertCircle } from 'lucide-react';
-import { db, collection, query, getDocs, where, doc, updateDoc, increment, addDoc, serverTimestamp } from '@/src/lib/firebase';
+import { api } from '@/src/lib/firebase';
 import { UserProfile, Task } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion } from 'motion/react';
@@ -13,60 +13,35 @@ export const TasksPage: React.FC<TasksPageProps> = ({ profile }) => {
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [verifying, setVerifying] = React.useState<string | null>(null);
-  const [completedTaskIds, setCompletedTaskIds] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const q = query(collection(db, 'tasks'), where('isActive', '==', true));
-        const snapshot = await getDocs(q);
-        const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-        setTasks(tasksData);
-
-        // Fetch completed tasks for this user
-        const completedQ = query(collection(db, 'transactions'), where('userId', '==', profile.uid), where('type', '==', 'task_reward'));
-        const completedSnapshot = await getDocs(completedQ);
-        const completedIds = new Set(completedSnapshot.docs.map(doc => {
-          const desc = doc.data().description;
-          // Extract taskId from description if stored there, or usually we'd have a separate completed_tasks collection
-          // For now, let's assume description contains taskId or we check by uniqueness
-          return doc.data().taskId; // Assuming we store taskId in transaction
-        }).filter(Boolean));
-        setCompletedTaskIds(completedIds as Set<string>);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTasks();
   }, [profile.uid]);
 
-  const verifyTask = async (task: Task) => {
-    setVerifying(task.id);
-    // Simulate verification delay
-    await new Promise(res => setTimeout(res, 2000));
-
+  const fetchTasks = async () => {
     try {
-      const userRef = doc(db, 'users', profile.uid);
-      await updateDoc(userRef, {
-        balance: increment(task.reward),
-        totalEarned: increment(task.reward)
-      });
-
-      await addDoc(collection(db, 'transactions'), {
-        userId: profile.uid,
-        taskId: task.id,
-        amount: task.reward,
-        type: 'task_reward',
-        description: `Completed task: ${task.title}`,
-        createdAt: serverTimestamp()
-      });
-
-      setCompletedTaskIds(prev => new Set([...prev, task.id]));
+      const data = await api.fetch('/tasks');
+      setTasks(data);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyTask = async (task: Task) => {
+    setVerifying(task.id);
+    // Real verification is usually clicking the link then claiming
+    // backend will record it.
+    try {
+      await api.fetch('/tasks/claim', {
+        method: 'POST',
+        body: JSON.stringify({ taskId: task.id })
+      });
+      await fetchTasks();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to claim task. Identity verification failed or task already claimed.");
     } finally {
       setVerifying(null);
     }
@@ -109,7 +84,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ profile }) => {
            </div>
         ) : (
           tasks.map((task) => {
-            const isCompleted = completedTaskIds.has(task.id);
+            const isCompleted = task.isCompleted;
             const isVerifying = verifying === task.id;
 
             return (

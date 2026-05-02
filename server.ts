@@ -292,21 +292,33 @@ async function startServer() {
   });
 
   app.post("/api/ads/reward", authenticate, (req: any, res) => {
+    const user = db.prepare("SELECT daily_ads_watched FROM users WHERE id = ?").get(req.user.id) as any;
     const stats = db.prepare("SELECT ad_reward FROM app_stats WHERE id = 1").get() as any;
-    const reward = stats.ad_reward;
     
+    if (user.daily_ads_watched >= 20) {
+      return res.status(400).json({ error: "Daily ad limit reached" });
+    }
+
+    const reward = stats.ad_reward;
     db.prepare("UPDATE users SET balance = balance + ?, total_earned = total_earned + ?, daily_ads_watched = daily_ads_watched + 1 WHERE id = ?")
       .run(reward, reward, req.user.id);
     
+    const txId = Math.random().toString(36).substring(2, 10).toUpperCase();
     db.prepare("INSERT INTO transactions (id, user_id, amount, type, description) VALUES (?, ?, ?, ?, ?)")
-      .run(Math.random().toString(36).substring(2, 9), req.user.id, reward, "credit", "Ad Watch Reward");
+      .run(txId, req.user.id, reward, "credit", "Ad Watch Reward");
     
     res.json({ reward });
   });
 
-  app.get("/api/tasks", (req, res) => {
-    const tasks = db.prepare("SELECT * FROM tasks WHERE is_active = 1").all();
-    res.json(tasks);
+  app.get("/api/tasks", authenticate, (req: any, res) => {
+    const tasks = db.prepare("SELECT * FROM tasks WHERE is_active = 1").all() as any[];
+    const completed = db.prepare("SELECT task_id FROM task_completions WHERE user_id = ?").all(req.user.id) as any[];
+    const completedIds = completed.map(c => c.task_id);
+
+    res.json(tasks.map(t => ({
+      ...t,
+      isCompleted: completedIds.includes(t.id)
+    })));
   });
 
   app.post("/api/tasks/claim", authenticate, (req: any, res) => {
@@ -314,14 +326,20 @@ async function startServer() {
     const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(taskId) as any;
     if (!task) return res.status(404).json({ error: "Task not found" });
 
-    // Check if already completed
     const existing = db.prepare("SELECT * FROM task_completions WHERE user_id = ? AND task_id = ?").get(req.user.id, taskId);
-    if (existing) return res.status(400).json({ error: "Task already claimed or pending" });
+    if (existing) return res.status(400).json({ error: "Task already completed" });
 
-    db.prepare("INSERT INTO task_completions (id, user_id, task_id, status) VALUES (?, ?, ?, ?)")
-      .run(Math.random().toString(36).substring(2, 9), req.user.id, taskId, "pending");
+    db.prepare("INSERT INTO task_completions (user_id, task_id) VALUES (?, ?)")
+      .run(req.user.id, taskId);
 
-    res.json({ message: "Task completion submitted for verification" });
+    db.prepare("UPDATE users SET balance = balance + ?, total_earned = total_earned + ? WHERE id = ?")
+      .run(task.reward, task.reward, req.user.id);
+
+    const txId = Math.random().toString(36).substring(2, 10).toUpperCase();
+    db.prepare("INSERT INTO transactions (id, user_id, amount, type, description) VALUES (?, ?, ?, ?, ?)")
+      .run(txId, req.user.id, task.reward, "credit", `Social Task: ${task.title}`);
+
+    res.json({ success: true, reward: task.reward });
   });
 
   // --- Wallet & Withdrawals ---
@@ -397,9 +415,9 @@ async function startServer() {
   });
 
   app.post("/api/admin/stats", authenticate, isAdmin, (req, res) => {
-    const { ad_reward, min_withdrawal } = req.body;
-    db.prepare("UPDATE app_stats SET ad_reward = ?, min_withdrawal = ? WHERE id = 1")
-      .run(ad_reward, min_withdrawal);
+    const { ad_reward, min_withdrawal, ads_content } = req.body;
+    db.prepare("UPDATE app_stats SET ad_reward = ?, min_withdrawal = ?, ads_content = ? WHERE id = 1")
+      .run(ad_reward, min_withdrawal, JSON.stringify(ads_content));
     res.json({ success: true });
   });
 

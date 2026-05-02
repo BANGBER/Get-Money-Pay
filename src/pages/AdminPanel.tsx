@@ -20,6 +20,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
   // Form states
   const [newAdReward, setNewAdReward] = React.useState(currentStats?.adReward?.toString() || '0.04');
   const [newMinWithdraw, setNewMinWithdraw] = React.useState(currentStats?.minWithdrawal?.toString() || '1.00');
+  const [adsContent, setAdsContent] = React.useState<string[]>(currentStats?.adsContent || ['', '', '']);
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -63,7 +64,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
         method: "POST",
         body: JSON.stringify({
           ad_reward: parseFloat(newAdReward),
-          min_withdrawal: parseFloat(newMinWithdraw)
+          min_withdrawal: parseFloat(newMinWithdraw),
+          ads_content: adsContent
         })
       });
       onStatsUpdate();
@@ -72,6 +74,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentStats, onStatsUpd
       console.error(err);
     }
   };
+
+  // ... (inside settings tab)
+  {activeTab === 'settings' && (
+          <div className="p-8 space-y-8">
+            <h3 className="text-xl font-black text-white">App Configuration</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               {/* existing inputs */}
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-black text-white uppercase tracking-widest">Ad Rotation Content (3 Ads)</h4>
+              {adsContent.map((ad, idx) => (
+                <div key={idx} className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ad {idx + 1} URL/Script</label>
+                  <input 
+                    type="text"
+                    value={ad}
+                    onChange={(e) => {
+                      const newAds = [...adsContent];
+                      newAds[idx] = e.target.value;
+                      setAdsContent(newAds);
+                    }}
+                    placeholder="https://example.com/ad-script.js"
+                    className="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-white font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button 
+              onClick={updateGlobalStats}
+              className="bg-white text-slate-950 px-8 py-4 rounded-2xl font-black text-lg hover:bg-slate-200 transition-all shadow-2xl"
+            >
+              Save Changes
+            </button>
+          </div>
+        )}
 
   const addTask = async () => {
     const title = prompt("Task Title:");

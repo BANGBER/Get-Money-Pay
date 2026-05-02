@@ -97,7 +97,7 @@ export const getDoc = async (docRef: any) => {
     const parts = docRef.path.split('/');
     if (parts[0] === 'config' || parts[0] === 'stats') {
       const stats = await api.fetch("/stats");
-      return { exists: () => true, data: () => stats };
+      return { exists: () => true, data: () => ({ ...stats, adReward: stats.ad_reward, minWithdrawal: stats.min_withdrawal, adsContent: stats.ads_content ? JSON.parse(stats.ads_content) : [] }) };
     }
     if (parts[0] === 'users' && parts[1]) {
         const p = await api.fetch("/user/profile");
@@ -145,7 +145,7 @@ export const onSnapshot = (ref: any, callback: any) => {
         const parts = ref.path.split('/');
         if ((parts[0] === 'config' || parts[0] === 'stats') || (parts[0] === 'stats' && parts[1] === 'global')) {
            const stats = await api.fetch("/stats");
-           callback({ exists: () => true, data: () => ({ ...stats, adReward: stats.ad_reward, minWithdrawal: stats.min_withdrawal, maxDailyAds: 20 }) });
+           callback({ exists: () => true, data: () => ({ ...stats, adReward: stats.ad_reward, minWithdrawal: stats.min_withdrawal, maxDailyAds: 20, adsContent: stats.ads_content ? JSON.parse(stats.ads_content) : [] }) });
         } else if (parts[0] === 'users' && parts[1]) {
            const p = await api.fetch("/user/profile");
            const profile = { 

@@ -6,7 +6,6 @@ import { UserProfile, AppStats } from './types';
 // Components
 import { Layout } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
 import { AdsPage } from './pages/AdsPage';
 import { TasksPage } from './pages/TasksPage';
@@ -76,18 +75,21 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 space-y-4">
-        <h1 className="text-4xl font-black bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent animate-pulse">
-           GetMoneyPay
-        </h1>
-        <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden">
-          <div className="h-full bg-purple-600 animate-[loading_2s_infinite]" />
+      <div className="min-h-screen bg-[#0F172A] flex flex-col items-center justify-center p-6 space-y-6">
+        <div className="relative">
+          <div className="absolute -inset-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full blur-xl opacity-20 animate-pulse" />
+          <h1 className="relative text-5xl font-black text-white italic tracking-tighter">
+             GetMoneyPay
+          </h1>
+        </div>
+        <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
+          <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-[loading_1.5s_infinite]" />
         </div>
         <style dangerouslySetInnerHTML={{ __html: `
           @keyframes loading {
-            0% { width: 0%; margin-left: 0%; }
-            50% { width: 50%; margin-left: 25%; }
-            100% { width: 0%; margin-left: 100%; }
+            0% { width: 0%; transform: translateX(-100%); }
+            50% { width: 100%; transform: translateX(0%); }
+            100% { width: 0%; transform: translateX(100%); }
           }
         `}} />
       </div>
@@ -96,63 +98,58 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Auth Routes */}
-        <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="login" />} />
-        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="login" />} />
-        <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="register" />} />
-        <Route path="/regis" element={user ? <Navigate to="/dashboard" /> : <AuthPage type="register" />} />
-        <Route path="/reset-password" element={<AuthPage type="reset-password" />} />
+      <Layout profile={profile}>
+        <Routes>
+          {/* Dashboard and Home */}
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute profile={profile}>
+              <Dashboard profile={profile!} stats={stats!} />
+            </ProtectedRoute>
+          } />
+          
+          {/* Ad Routes */}
+          <Route path="/ads" element={
+            <ProtectedRoute profile={profile}>
+              <AdsPage profile={profile!} stats={stats!} onRewardReceived={() => {}} />
+            </ProtectedRoute>
+          } />
 
-        {/* Dashboard and Home */}
-        <Route path="/(.*)" element={<Navigate to="/dashboard" />} />
-        <Route path="/dashboard" element={
-          <ProtectedRoute profile={profile}>
-            <Dashboard profile={profile!} stats={stats!} />
-          </ProtectedRoute>
-        } />
-        
-        {/* Ad Routes */}
-        <Route path="/ads" element={
-          <ProtectedRoute profile={profile}>
-            <AdsPage profile={profile!} stats={stats!} onRewardReceived={() => {}} />
-          </ProtectedRoute>
-        } />
+          <Route path="/tasks" element={
+            <ProtectedRoute profile={profile}>
+              <TasksPage profile={profile!} />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/tasks" element={
-          <ProtectedRoute profile={profile}>
-            <TasksPage profile={profile!} />
-          </ProtectedRoute>
-        } />
+          <Route path="/wallet" element={
+            <ProtectedRoute profile={profile}>
+              <WalletPage profile={profile!} minWithdrawal={stats?.minWithdrawal || 1.0} onRefresh={() => {}} />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/wallet" element={
-          <ProtectedRoute profile={profile}>
-            <WalletPage profile={profile!} minWithdrawal={stats?.minWithdrawal || 1.0} onRefresh={() => {}} />
-          </ProtectedRoute>
-        } />
+          <Route path="/referrals" element={
+            <ProtectedRoute profile={profile}>
+              <ReferralPage profile={profile!} />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/referrals" element={
-          <ProtectedRoute profile={profile}>
-            <ReferralPage profile={profile!} />
-          </ProtectedRoute>
-        } />
+          <Route path="/leaderboard" element={
+            <ProtectedRoute profile={profile}>
+              <LeaderboardPage />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/leaderboard" element={
-          <ProtectedRoute profile={profile}>
-            <LeaderboardPage />
-          </ProtectedRoute>
-        } />
+          {/* Admin Routes */}
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly profile={profile}>
+              <AdminPanel currentStats={stats!} onStatsUpdate={() => {}} />
+            </ProtectedRoute>
+          } />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={
-          <ProtectedRoute adminOnly profile={profile}>
-            <AdminPanel currentStats={stats!} onStatsUpdate={() => {}} />
-          </ProtectedRoute>
-        } />
-
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
-      </Routes>
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/dashboard" />} />
+        </Routes>
+      </Layout>
     </BrowserRouter>
   );
 }

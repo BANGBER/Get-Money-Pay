@@ -1,7 +1,6 @@
 import React from 'react';
 import { PlayCircle, ShieldIcon, CheckCircle2, AlertCircle, X, ExternalLink } from 'lucide-react';
-import { auth, db, doc, updateDoc, increment, addDoc, collection, serverTimestamp } from '@/src/lib/firebase';
-import { addBalance } from '@/src/services/wallet';
+import { api, auth } from '@/src/lib/firebase';
 import { UserProfile, AdConfig, AppStats } from '@/src/types';
 import { formatCurrency, cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -36,6 +35,7 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
     }
     setIsPlaying(true);
     setTimeLeft(60);
+    setCurrentAdIndex(0);
     setIsCompleted(false);
     setError(null);
   };
@@ -44,7 +44,13 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
     let interval: NodeJS.Timeout | null = null;
     if (isPlaying && timeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          const next = prev - 1;
+          // Rotate ads every 20 seconds
+          if (next === 40) setCurrentAdIndex(1);
+          if (next === 20) setCurrentAdIndex(2);
+          return next;
+        });
       }, 1000);
     }
     return () => {
@@ -56,8 +62,6 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
     if (isPlaying && timeLeft <= 0) {
       handleComplete();
     }
-    if (timeLeft === 40) setCurrentAdIndex(1);
-    if (timeLeft === 20) setCurrentAdIndex(2);
   }, [timeLeft, isPlaying]);
 
   // Handle visibility API (Anti-cheat)
@@ -80,15 +84,7 @@ export const AdsPage: React.FC<AdsPageProps> = ({ profile, stats, onRewardReceiv
     setIsLoading(true);
 
     try {
-      const reward = stats?.adReward || 0.04;
-      await addBalance(profile.uid, reward, "Watched ad reward");
-
-      // Update daily ad count locally/in Firestore
-      const userRef = doc(db, 'users', profile.uid);
-      await updateDoc(userRef, {
-        dailyAdsWatched: increment(1)
-      });
-
+      await api.fetch('/ads/reward', { method: 'POST' });
       setIsCompleted(true);
       onRewardReceived();
     } catch (err) {
