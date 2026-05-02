@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { auth } from '@/src/lib/firebase';
 import { cn } from '@/src/lib/utils';
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { motion, AnimatePresence } from 'motion/react';
 
 interface LayoutProps {
